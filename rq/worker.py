@@ -397,12 +397,12 @@ class Worker(object):
         while not self._stop_requested and is_suspended(self.connection):
 
             if burst:
-                self.log.info('Suspended in burst mode, exiting')
-                self.log.info('Note: There could still be unfinished jobs on the queue')
+                self.log.debug('Suspended in burst mode, exiting')
+                self.log.debug('Note: There could still be unfinished jobs on the queue')
                 raise StopRequested
 
             if not notified:
-                self.log.info('Worker suspended, run `rq resume` to resume')
+                self.log.debug('Worker suspended, run `rq resume` to resume')
                 before_state = self.get_state()
                 self.set_state(WorkerStatus.SUSPENDED)
                 notified = True
@@ -425,7 +425,7 @@ class Worker(object):
 
         did_perform_work = False
         self.register_birth()
-        self.log.info("RQ worker {0!r} started, version {1}".format(self.key, VERSION))
+        self.log.debug("RQ worker {0!r} started, version {1}".format(self.key, VERSION))
         self.set_state(WorkerStatus.STARTED)
 
         try:
@@ -437,7 +437,7 @@ class Worker(object):
                         self.clean_registries()
 
                     if self._stop_requested:
-                        self.log.info('Stopping on request')
+                        self.log.debug('Stopping on request')
                         break
 
                     timeout = None if burst else max(1, self.default_worker_ttl - 60)
@@ -445,7 +445,7 @@ class Worker(object):
                     result = self.dequeue_job_and_maintain_ttl(timeout)
                     if result is None:
                         if burst:
-                            self.log.info("RQ worker {0!r} done, quitting".format(self.key))
+                            self.log.debug("RQ worker {0!r} done, quitting".format(self.key))
                         break
                 except StopRequested:
                     break
@@ -470,8 +470,8 @@ class Worker(object):
 
         self.set_state(WorkerStatus.IDLE)
         self.procline('Listening on {0}'.format(','.join(qnames)))
-        self.log.info('')
-        self.log.info('*** Listening on {0}...'.format(green(', '.join(qnames))))
+        #self.log.info('')
+        self.log.debug('*** Listening on {0}...'.format(green(', '.join(qnames))))
 
         while True:
             self.heartbeat()
@@ -610,7 +610,7 @@ class Worker(object):
 
                 pipeline.execute()
 
-                logger.info('Call %d handlers on successful finish of job %s', len(self.finish_handlers), job.id)
+                logger.debug('Call %d handlers on successful finish of job %s', len(self.finish_handlers), job.id)
                 for f in self.finish_handlers:
                     f(job, self.connection)
 
@@ -626,19 +626,19 @@ class Worker(object):
                 self.handle_exception(job, *sys.exc_info())
                 return False
             finally:
-                logger.info('Call %d handlers on finishing job, success or failure, %s', len(self.finish_handlers), job.id)
+                logger.debug('Call %d handlers on finishing job, success or failure, %s', len(self.finish_handlers), job.id)
                 for f in self.final_handlers:
                     f(job, self.connection)
 
-        self.log.info('{0}: {1} ({2})'.format(green(job.origin), blue('Job OK'), job.id))
+        self.log.debug('{0}: {1} ({2})'.format(green(job.origin), blue('Job OK'), job.id))
         if rv:
             log_result = "{0!r}".format(as_text(text_type(rv)))
             self.log.debug('Result: {0}'.format(yellow(log_result)))
 
         if result_ttl == 0:
-            self.log.info('Result discarded immediately')
+            self.log.debug('Result discarded immediately')
         elif result_ttl > 0:
-            self.log.info('Result is kept for {0} seconds'.format(result_ttl))
+            self.log.debug('Result is kept for {0} seconds'.format(result_ttl))
         else:
             self.log.warning('Result will never expire, clean up result key manually')
 
